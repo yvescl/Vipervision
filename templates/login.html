@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ViperVision — Access</title>
+  <style>
+    :root {
+      --lc-orange: #ff9f4d;
+      --lc-gold:   #ffcc66;
+      --lc-lilac:  #cc99cc;
+      --lc-blue:   #7f8fe0;
+      --lc-red:    #cc6677;
+      --lc-ice:    #9fc8ff;
+      --lc-panel:  #11151c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Antonio", "Oswald", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+      background: #000;
+      color: var(--lc-ice);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .card {
+      width: 100%;
+      max-width: 420px;
+      display: grid;
+      grid-template-columns: 64px 1fr;
+      grid-template-rows: 52px auto 20px;
+      grid-template-areas:
+        "elbowtl head"
+        "rail    body"
+        "elbowbl foot";
+      gap: 8px;
+    }
+    .elbowtl {
+      grid-area: elbowtl;
+      border-top-left-radius: 40px;
+      background: radial-gradient(circle 20px at right bottom, #000 0 20px, var(--lc-orange) 21px);
+    }
+    .elbowbl {
+      grid-area: elbowbl;
+      border-bottom-left-radius: 40px;
+      background: radial-gradient(circle 14px at right top, #000 0 14px, var(--lc-lilac) 15px);
+    }
+    .head {
+      grid-area: head;
+      background: var(--lc-orange);
+      border-radius: 8px 40px 40px 8px;
+      display: flex;
+      align-items: center;
+      padding: 0 22px;
+      color: #000;
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+    }
+    .head b { color: #7a1f00; }
+    .rail {
+      grid-area: rail;
+      background: var(--lc-blue);
+      border-radius: 4px 20px 20px 4px;
+    }
+    .foot {
+      grid-area: foot;
+      background: var(--lc-lilac);
+      border-radius: 8px 16px 16px 8px;
+    }
+    .body {
+      grid-area: body;
+      background: var(--lc-panel);
+      border-radius: 4px 20px 20px 4px;
+      padding: 1.4rem 1.4rem 1.6rem;
+    }
+    p.sub {
+      font-size: 0.75rem; color: var(--lc-lilac);
+      text-transform: uppercase; letter-spacing: 0.16em;
+      margin-bottom: 1.25rem;
+    }
+    label {
+      display: block; font-size: 0.72rem; color: var(--lc-gold);
+      text-transform: uppercase; letter-spacing: 0.12em;
+      margin-bottom: 0.35rem;
+    }
+    input {
+      width: 100%;
+      padding: 0.6rem 0.85rem;
+      margin-bottom: 1rem;
+      border: 2px solid #2a2f3a;
+      border-radius: 4px 16px 16px 4px;
+      background: #000;
+      color: var(--lc-ice);
+      font: inherit;
+      font-size: 0.95rem;
+      letter-spacing: 0.03em;
+    }
+    input:focus { outline: none; border-color: var(--lc-orange); }
+    button {
+      width: 100%;
+      padding: 0.65rem;
+      border: none;
+      border-radius: 4px 18px 18px 4px;
+      background: var(--lc-orange);
+      color: #000;
+      font: inherit;
+      font-weight: 700;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      cursor: pointer;
+    }
+    button:hover { filter: brightness(1.15); }
+    .error {
+      background: rgba(204, 102, 119, 0.14);
+      border-left: 5px solid var(--lc-red);
+      color: var(--lc-red);
+      font-size: 0.8rem;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      padding: 0.55rem 0.75rem;
+      border-radius: 2px 12px 12px 2px;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="elbowtl"></div>
+    <div class="head">VIPER<b>VISION</b></div>
+    <div class="rail"></div>
+    <div class="body">
+      <p class="sub">Authorization required</p>
+      {% if error %}<div class="error">{{ error }}</div>{% endif %}
+      <form method="POST" action="login">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" autocomplete="username" autofocus>
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password">
+        <button type="submit">Engage</button>
+      </form>
+    </div>
+    <div class="elbowbl"></div>
+    <div class="foot"></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,172 @@
+# Shared config for the ViperVision camera services. `x-` keys are ignored by
+# Compose itself and used only as YAML anchors, so cam1 and cam2 don't duplicate
+# settings — change a secret/bucket/interval once and both pick it up.
+
+x-vipervision-env: &vipervision-env
+  # Local timezone for timestamps (Telegram captions, clip filenames, gallery).
+  # tzdata ships in the image; handles CET/CEST daylight-saving automatically.
+  TZ: Europe/Brussels
+  VIPERVISION_USER: admin
+  # Secrets come from the gitignored .env next to this file. If
+  # VIPERVISION_PASSWORD is unset a random one is generated and printed to the
+  # container logs (`docker compose logs`).
+  VIPERVISION_PASSWORD: ${VIPERVISION_PASSWORD}
+  # Keeps login sessions valid across restarts; use a long random string.
+  SECRET_KEY: ${SECRET_KEY}
+  # Set to 1 ONLY if you reach the app exclusively via the https proxy; leave 0
+  # to keep direct http://<host>:<port> logins working.
+  SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-0}
+  # Seconds between person/animal-detection inferences. 1.0 keeps CPU modest
+  # (~0.8 core/camera) and leaves headroom for the second camera.
+  DETECT_INTERVAL: "1.0"
+  # Startup detectors: motion ON everywhere, human/animal OFF (toggle per
+  # session in the UI). These match the code defaults but are pinned here so
+  # the intent is explicit.
+  DETECT_DEFAULT: "0"
+  MOTION_DEFAULT: "1"
+  ANIMAL_DEFAULT: "0"
+  # Detection snapshots -> MinIO. Scoped access key (read/write on the
+  # detections bucket only, not root), from .env. Both cameras share the bucket.
+  MINIO_ENDPOINT: localhost:9000
+  MINIO_ACCESS_KEY: ${MINIO_APP_ACCESS_KEY}
+  MINIO_SECRET_KEY: ${MINIO_APP_SECRET_KEY}
+  MINIO_BUCKET: vipervision-detections
+  MINIO_SECURE: "0"
+  # Telegram alerts (optional): set token + chat in .env to enable; empty = off.
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+  TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+  # Prometheus /metrics: set METRICS_TOKEN in .env to require a bearer token.
+  METRICS_TOKEN: ${METRICS_TOKEN:-}
+  # Other tuning (defaults in app.py): JPEG_QUALITY, SAVE_AFTER_SECONDS,
+  # CLIP_PRE_SECONDS, CLIP_POST_SECONDS, RTSP_TRANSPORT.
+
+x-vipervision-base: &vipervision-base
+  image: vipervision:${VIPERVISION_TAG:-latest}
+  restart: unless-stopped
+  # Host networking: the primary camera only speaks RTP-over-UDP (awkward
+  # through Docker's bridge NAT), and host mode reaches LAN cameras directly.
+  network_mode: host
+
+services:
+  # Primary camera. Builds the image the other services reuse. Serves on :5001.
+  vipervision:
+    <<: *vipervision-base
+    build: .
+    container_name: vipervision
+    depends_on:
+      - minio
+    # "up" != "serving": probe the login page (slim image has no curl).
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:5001/login').status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    environment:
+      <<: *vipervision-env
+      RTSP_URL: rtsp://192.168.64.106:554/onvif1
+      PORT: "5001"
+      # Two-way Telegram control. Only ONE instance may long-poll the bot (a
+      # second poller on the same token returns 409), so it lives on cam1.
+      TELEGRAM_COMMANDS: ${TELEGRAM_COMMANDS:-1}
+      # Calmer motion on cam1's 720p feed: less sensitive, ignore small
+      # movement, and require sustained motion before recording a clip.
+      MOTION_VAR_THRESHOLD: "50"
+      MOTION_MIN_AREA: "3000"
+      MOTION_SAVE_AFTER_SECONDS: "8"
+      # Ignore the equipment rack / switch with blinking LEDs (center-left).
+      # Normalized x1,y1,x2,y2. See cam1_zone.jpg for the region.
+      MOTION_EXCLUDE: "0.34,0.57,0.47,0.81"
+      # Longer clips, same as cam2 (17s). Buffer sizes itself from these.
+      CLIP_PRE_SECONDS: "5"
+      CLIP_POST_SECONDS: "12"
+      # Episode capture: keep recording while motion continues (whole
+      # sleepwalking episode = one clip), ending after 6s stillness, max 5 min.
+      MOTION_EXTEND: "1"
+      MOTION_END_GRACE_SECONDS: "6"
+      MOTION_MAX_SECONDS: "300"
+
+  # Second camera. Reuses the same image on :5002; set VIPERVISION2_RTSP_URL in
+  # .env. Bring both up together: VIPERVISION_TAG=<tag> docker compose up -d
+  vipervision2:
+    <<: *vipervision-base
+    container_name: vipervision2
+    depends_on:
+      - vipervision
+      - minio
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:5002/login').status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    environment:
+      <<: *vipervision-env
+      RTSP_URL: ${VIPERVISION2_RTSP_URL}
+      PORT: "5002"
+      # Inbound commands off here — cam1 owns the single bot poller.
+      TELEGRAM_COMMANDS: "0"
+      # ESP32-CAM white LED via ESPHome's REST API (needs a `light:` component
+      # in the ESPHome config; a bare `output:` is not exposed over REST).
+      LIGHT_URL: ${VIPERVISION2_LIGHT_URL:-}
+      # cam2's dim ESP32 feed needs a more sensitive motion setting than the
+      # conservative defaults (var 40 / area 1500).
+      MOTION_VAR_THRESHOLD: "30"
+      MOTION_MIN_AREA: "900"
+      # Longer clips for cam2 (default is 3+4=7s). The rolling buffer sizes
+      # itself from these, so the extra pre-roll is retained.
+      CLIP_PRE_SECONDS: "5"
+      CLIP_POST_SECONDS: "12"
+      # Run detection every 0.5s (overrides the shared 1.0s).
+      DETECT_INTERVAL: "0.5"
+
+  # Third camera. Same image on :5003; set VIPERVISION3_RTSP_URL in .env.
+  vipervision3:
+    <<: *vipervision-base
+    container_name: vipervision3
+    depends_on:
+      - vipervision
+      - minio
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:5003/login').status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    environment:
+      <<: *vipervision-env
+      RTSP_URL: ${VIPERVISION3_RTSP_URL}
+      PORT: "5003"
+      # Inbound commands off — cam1 owns the single bot poller.
+      TELEGRAM_COMMANDS: "0"
+      LIGHT_URL: ${VIPERVISION3_LIGHT_URL:-}
+      # Run detection every 0.5s (overrides the shared 1.0s).
+      DETECT_INTERVAL: "0.5"
+
+  # S3-compatible object storage for detection clips. Console :9001, API :9000.
+  minio:
+    image: minio/minio
+    container_name: vipervision-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      - TZ=Europe/Brussels
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  minio-data:

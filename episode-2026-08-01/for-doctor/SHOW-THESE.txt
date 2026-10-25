@@ -1,0 +1,19 @@
+FOR YOUR DOCTOR (huisarts / sleep clinic)
+=========================================
+These few clips tell the story of one night — 2026-08-01. Show in order:
+
+  README.txt                       -> the timeline summary (show this FIRST)
+  1_0405_getting-up.mp4            -> ~04:05, you get up and start moving
+  2_0414_leaving-before-the-gap.mp4-> ~04:14, moving out of the room
+     [ then 83 MINUTES with NO motion — you were out of the house.
+       This is when you were found, on the street. ]
+  3_0538_returning.mp4             -> ~05:38, you come back in
+
+KEY POINTS TO TELL THEM
+-----------------------
+- You have NO memory of any of it.
+- You were found OUTSIDE, on the street, undressed.
+- It has happened more than once (also the night of 2026-07-30).
+- The camera is indoor + infrared: it shows you leaving and returning,
+  not the outdoors itself — the ~83-min silence is the "gone" window.
+- All timestamps are local (Europe/Brussels).

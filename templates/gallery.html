@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ViperVision — Detections</title>
+  <style>
+    :root {
+      --lc-orange: #ff9f4d;
+      --lc-gold:   #ffcc66;
+      --lc-lilac:  #cc99cc;
+      --lc-blue:   #7f8fe0;
+      --lc-red:    #cc6677;
+      --lc-ice:    #9fc8ff;
+      --lc-panel:  #11151c;
+      --gap: 8px;
+      --side: 160px;
+      --head: 64px;
+      --foot: 28px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Antonio", "Oswald", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+      background: #000;
+      color: var(--lc-ice);
+      min-height: 100vh;
+    }
+    .lcars {
+      display: grid;
+      grid-template-columns: var(--side) 1fr;
+      grid-template-rows: var(--head) 1fr var(--foot);
+      grid-template-areas:
+        "elbowtl head"
+        "side    content"
+        "elbowbl foot";
+      gap: var(--gap);
+      min-height: 100vh;
+      padding: var(--gap);
+    }
+    .lcars-elbow-tl {
+      grid-area: elbowtl;
+      border-top-left-radius: 44px;
+      background: radial-gradient(circle 26px at right bottom, transparent 0 26px, var(--lc-gold) 27px);
+    }
+    .lcars-elbow-bl {
+      grid-area: elbowbl;
+      border-bottom-left-radius: 44px;
+      background: radial-gradient(circle 18px at right top, transparent 0 18px, var(--lc-gold) 19px);
+    }
+    .lcars-head {
+      grid-area: head;
+      background: var(--lc-gold);
+      border-radius: 8px 44px 44px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px 0 24px;
+      color: #000;
+      gap: 1rem;
+    }
+    .lcars-head-title { font-size: 1.7rem; font-weight: 800; letter-spacing: 0.16em; }
+    .lcars-head-code { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.22em; opacity: 0.75; white-space: nowrap; }
+    .lcars-foot {
+      grid-area: foot;
+      background: var(--lc-lilac);
+      border-radius: 8px 20px 20px 8px;
+      display: flex; align-items: center; justify-content: flex-end;
+      padding: 0 20px; color: #000; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.24em;
+    }
+    .lcars-side { grid-area: side; display: flex; flex-direction: column; gap: var(--gap); }
+    .lcars-pill {
+      display: flex; align-items: flex-end; justify-content: flex-end;
+      width: 100%; min-height: 40px; padding: 0.45rem 0.8rem;
+      border: none; border-radius: 4px 24px 24px 4px;
+      font: inherit; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; text-decoration: none; color: #000; cursor: pointer;
+      transition: filter 0.12s;
+    }
+    .lcars-pill:hover { filter: brightness(1.15); }
+    .lcars-pill.deco { cursor: default; }
+    .lcars-pill.deco:hover { filter: none; }
+    .p-orange { background: var(--lc-orange); }
+    .p-gold   { background: var(--lc-gold); }
+    .p-lilac  { background: var(--lc-lilac); }
+    .p-blue   { background: var(--lc-blue); }
+    .lcars-side-fill { flex: 1; min-height: 24px; background: var(--lc-blue); border-radius: 4px 24px 24px 4px; }
+
+    .lcars-content { grid-area: content; display: flex; flex-direction: column; gap: 0.9rem; min-width: 0; }
+
+    .meta {
+      display: flex; align-items: center; gap: 0.75rem;
+      color: var(--lc-ice); font-size: 0.8rem;
+      text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700;
+    }
+    .meta .controls { margin-left: auto; display: flex; align-items: center; gap: 0.5rem; }
+    button.refresh, input[type="date"], select#sort, select#view {
+      padding: 0.4rem 0.9rem;
+      border: 2px solid #2a2f3a;
+      border-radius: 4px 16px 16px 4px;
+      background: #000;
+      color: var(--lc-gold);
+      font: inherit; font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase;
+      cursor: pointer;
+    }
+    input[type="date"] { color-scheme: dark; }
+    input[type="date"]:focus, button.refresh:hover { outline: none; border-color: var(--lc-orange); color: var(--lc-orange); }
+    button.clear { background: transparent; border: none; color: var(--lc-lilac); font: inherit; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; padding: 0.35rem 0.4rem; }
+    button.clear:hover { color: var(--lc-red); }
+    button.loadmore {
+      margin: 0.5rem auto 0; display: block;
+      padding: 0.55rem 1.8rem;
+      border: none; border-radius: 4px 20px 20px 4px;
+      background: var(--lc-orange); color: #000;
+      font: inherit; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em;
+      cursor: pointer;
+    }
+    button.loadmore:hover { filter: brightness(1.15); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--gap);
+    }
+    .card {
+      background: var(--lc-panel);
+      border: none;
+      border-left: 6px solid var(--lc-orange);
+      border-radius: 4px 16px 16px 4px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .card .thumb { width: 100%; aspect-ratio: 16 / 9; background: #000; display: block; }
+    .card video, .card img { width: 100%; height: 100%; object-fit: contain; background: #000; }
+    .card .info {
+      padding: 0.6rem 0.75rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    }
+    .card .when { font-size: 0.82rem; color: var(--lc-gold); text-transform: uppercase; letter-spacing: 0.05em; }
+    .card .sub { font-size: 0.72rem; color: #6b7688; margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .card .dl { color: var(--lc-lilac); text-decoration: none; }
+    .card .dl:hover { color: var(--lc-orange); }
+    .card .del {
+      background: transparent; border: none; color: #6b7688;
+      font-size: 0.95rem; cursor: pointer; padding: 0.2rem 0.35rem; line-height: 1;
+    }
+    .card .del:hover { color: var(--lc-red); }
+    .card .keep {
+      background: transparent; border: none; color: #6b7688;
+      font-size: 0.95rem; cursor: pointer; padding: 0.2rem 0.35rem; line-height: 1;
+    }
+    .card .keep:hover { color: var(--lc-gold); }
+    select#view { border: 2px solid var(--lc-gold); color: var(--lc-gold); font-weight: 700; }
+    .card .evid {
+      background: transparent; border: none; color: #6b7688;
+      font-size: 0.95rem; cursor: pointer; padding: 0.2rem 0.35rem; line-height: 1;
+    }
+    .card .evid:hover { color: #00dcdc; }
+    .badge {
+      padding: 0.2rem 0.65rem;
+      border-radius: 12px;
+      background: var(--lc-orange);
+      color: #000;
+      font-size: 0.75rem; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .empty {
+      padding: 3rem 1rem; text-align: center; color: var(--lc-lilac);
+      background: var(--lc-panel);
+      border-left: 6px solid var(--lc-lilac);
+      border-radius: 4px 16px 16px 4px;
+      text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.8rem;
+    }
+
+    @media (max-width: 640px) {
+      .lcars { grid-template-columns: 84px 1fr; }
+      :root { --side: 84px; }
+      .lcars-head-code { display: none; }
+      .lcars-head-title { font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="lcars">
+    <div class="lcars-elbow-tl"></div>
+    <header class="lcars-head">
+      <span class="lcars-head-title">DETECTIONS</span>
+      <span class="lcars-head-code">ARCHIVE · MEM-ALPHA</span>
+    </header>
+
+    <nav class="lcars-side">
+      <a href="." class="lcars-pill p-orange">◄ Live</a>
+      <a href="floorplan" class="lcars-pill p-blue">Floor plan</a>
+      <div class="lcars-pill p-lilac deco">Log</div>
+      <div class="lcars-pill p-blue deco">03·NCC</div>
+      <div class="lcars-side-fill"></div>
+      <div class="lcars-pill p-gold deco">Sec-Grid</div>
+    </nav>
+
+    <main class="lcars-content">
+      <div class="meta">
+        <span id="summary">Loading…</span>
+        <div class="controls">
+          <select id="sort" title="Sort order">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="largest">Largest first</option>
+            <option value="smallest">Smallest first</option>
+          </select>
+          <input type="date" id="date" title="Filter by day">
+          <button class="clear" id="clear" hidden>clear</button>
+          <select id="view" title="Category">
+            <option value="detections">📁 Detections</option>
+            <option value="saved">⭐ Saved</option>
+            <option value="evidence">🩺 Evidence</option>
+          </select>
+          <button class="refresh" id="refresh">Refresh</button>
+        </div>
+      </div>
+
+      <div class="grid" id="grid"></div>
+      <div class="empty" id="empty" hidden></div>
+      <button class="loadmore" id="loadmore" hidden>Load more</button>
+    </main>
+
+    <div class="lcars-elbow-bl"></div>
+    <footer class="lcars-foot">Starfleet Security</footer>
+  </div>
+
+  <script>
+    const grid = document.getElementById('grid');
+    const empty = document.getElementById('empty');
+    const summary = document.getElementById('summary');
+    const dateInput = document.getElementById('date');
+    const sortSel = document.getElementById('sort');
+    const clearBtn = document.getElementById('clear');
+    const viewSel = document.getElementById('view');
+    const loadMoreBtn = document.getElementById('loadmore');
+    const storageAvailable = {{ 'true' if available else 'false' }};
+    const PAGE = 30;
+    let offset = 0;      // how many clips are already shown
+    let total = 0;
+    let view = 'detections';   // detections | saved | evidence
+
+    // Filename: detections/2026/07/12/20260712-143500-2p.mp4
+    const KIND_ICON = { p: '🧍', c: '🐱', d: '🐶', b: '🐦', m: '🌀' };
+    function parseName(name) {
+      const base = name.split('/').pop();
+      const m = base.match(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})-(\d+)([a-z])\.(\w+)$/);
+      if (!m) return { when: base, count: null, icon: '🎞', ext: base.split('.').pop() };
+      const [, Y, Mo, D, h, mi, s, count, kind, ext] = m;
+      const d = new Date(Y, Mo - 1, D, h, mi, s);
+      return { when: d.toLocaleString(), count: Number(count),
+               icon: KIND_ICON[kind] || '🎞', ext };
+    }
+
+    function humanSize(bytes) {
+      if (!bytes) return '';
+      const kb = bytes / 1024;
+      return kb < 1024 ? kb.toFixed(0) + ' KB' : (kb / 1024).toFixed(1) + ' MB';
+    }
+
+    async function del(name, el) {
+      if (!confirm('Delete this clip? This cannot be undone.')) return;
+      try {
+        const res = await fetch('clip/' + encodeURI(name), { method: 'DELETE' });
+        if (res.status === 401) { window.location.reload(); return; }
+        const data = await res.json();
+        if (data.ok) {
+          el.remove();
+          total = Math.max(0, total - 1);
+          offset = Math.max(0, offset - 1);
+          updateSummary();
+          refreshCounts();
+          if (!grid.children.length) reload();
+        } else {
+          alert('Delete failed.');
+        }
+      } catch (e) { alert('Delete failed.'); }
+    }
+
+    async function keep(name, el) {
+      try {
+        const res = await fetch('keep', { method: 'POST', body: new URLSearchParams({ name }) });
+        if (res.status === 401) { window.location.reload(); return; }
+        const data = await res.json();
+        if (data.ok) {
+          // Moved out of detections/ -> drop from this (detections) view.
+          el.remove();
+          total = Math.max(0, total - 1);
+          offset = Math.max(0, offset - 1);
+          updateSummary();
+          refreshCounts();
+          if (!grid.children.length) reload();
+        } else {
+          alert('Keep failed.');
+        }
+      } catch (e) { alert('Keep failed.'); }
+    }
+
+    async function mark(name, el, to) {
+      try {
+        const res = await fetch('categorize', { method: 'POST', body: new URLSearchParams({ name, to }) });
+        if (res.status === 401) { window.location.reload(); return; }
+        const data = await res.json();
+        if (data.ok) {
+          el.remove();
+          total = Math.max(0, total - 1);
+          offset = Math.max(0, offset - 1);
+          updateSummary();
+          refreshCounts();
+          if (!grid.children.length) reload();
+        } else {
+          alert('Tag failed.');
+        }
+      } catch (e) { alert('Tag failed.'); }
+    }
+
+    function card(clip) {
+      const { when, count, icon, ext } = parseName(clip.name);
+      const el = document.createElement('div');
+      el.className = 'card';
+      const media = ext === 'mp4'
+        // #t=0.1 nudges browsers to render a first-frame poster.
+        ? `<video class="thumb" controls preload="metadata" src="clip/${encodeURI(clip.name)}#t=0.1"></video>`
+        : `<img class="thumb" loading="lazy" src="clip/${encodeURI(clip.name)}" alt="detection">`;
+      const badge = count === null ? '' : `<span class="badge">${count} ${icon}</span>`;
+      // ⭐ Keep: only for expiring detections clips. 🩺 Evidence: tag for the
+      // doctor — available on any clip not already in the evidence category.
+      const keepBtn = view === 'detections'
+        ? `<button class="keep" title="Keep (exempt from 7-day auto-delete)" aria-label="Keep clip">⭐</button>` : '';
+      const evBtn = view !== 'evidence'
+        ? `<button class="evid" title="Tag as evidence (for the doctor)" aria-label="Tag as evidence">🩺</button>` : '';
+      el.innerHTML = `
+        ${media}
+        <div class="info">
+          <div>
+            <div class="when">${when}</div>
+            <div class="sub">${humanSize(clip.size)} · <a class="dl" href="clip/${encodeURI(clip.name)}" download>download</a></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem">
+            ${badge}
+            ${keepBtn}
+            ${evBtn}
+            <button class="del" title="Delete clip" aria-label="Delete clip">🗑</button>
+          </div>
+        </div>`;
+      el.querySelector('.del').addEventListener('click', () => del(clip.name, el));
+      el.querySelector('.keep')?.addEventListener('click', () => keep(clip.name, el));
+      el.querySelector('.evid')?.addEventListener('click', () => mark(clip.name, el, 'evidence'));
+      return el;
+    }
+
+    function updateSummary() {
+      const shown = grid.children.length;
+      if (!total) { summary.textContent = '0 clips'; return; }
+      const noun = total === 1 ? 'clip' : 'clips';
+      summary.textContent = shown < total
+        ? `Showing ${shown} of ${total} ${noun}`
+        : `${total} ${noun}`;
+    }
+
+    function query() {
+      const params = new URLSearchParams({ limit: PAGE, offset });
+      if (dateInput.value) params.set('date', dateInput.value);
+      if (sortSel.value) params.set('sort', sortSel.value);
+      if (view !== 'detections') params.set('scope', view);
+      return 'clips?' + params.toString();
+    }
+
+    async function fetchPage(append) {
+      if (!storageAvailable) {
+        summary.textContent = 'Object storage is not configured — no clips are being saved.';
+        return;
+      }
+      try {
+        const res = await fetch(query());
+        if (res.status === 401) { window.location.reload(); return; }
+        const data = await res.json();
+        const clips = data.clips || [];
+        total = data.total || 0;
+        if (!append) { grid.innerHTML = ''; }
+        clips.forEach(c => grid.appendChild(card(c)));
+        offset = grid.children.length;
+        if (!grid.children.length) {
+          empty.hidden = false;
+          empty.textContent = view === 'saved'
+            ? 'No saved clips yet. Click ⭐ on a clip to keep it here.'
+            : view === 'evidence'
+            ? 'No evidence clips yet. Click 🩺 on a clip to tag it for the doctor.'
+            : (dateInput.value
+                ? 'No detections for that day.'
+                : 'No detections recorded yet. Clips appear here after a person lingers in view.');
+        } else {
+          empty.hidden = true;
+        }
+        loadMoreBtn.hidden = !data.has_more;
+        updateSummary();
+      } catch (e) {
+        summary.textContent = 'Could not load clips.';
+      }
+    }
+
+    function reload() {
+      offset = 0;
+      summary.textContent = 'Loading…';
+      clearBtn.hidden = !dateInput.value;
+      fetchPage(false);
+    }
+
+    document.getElementById('refresh').addEventListener('click', reload);
+    dateInput.addEventListener('change', reload);
+    sortSel.addEventListener('change', reload);
+    // Show live counts on the category selector, e.g. "⭐ Saved (15)".
+    async function refreshCounts() {
+      for (const [cat, label] of [['saved', '⭐ Saved'], ['evidence', '🩺 Evidence']]) {
+        try {
+          const res = await fetch('clips?scope=' + cat + '&limit=1');
+          if (!res.ok) continue;
+          const n = (await res.json()).total || 0;
+          const opt = viewSel.querySelector('option[value="' + cat + '"]');
+          if (opt) opt.textContent = n ? label + ' (' + n + ')' : label;
+        } catch (e) { /* ignore */ }
+      }
+    }
+
+    viewSel.addEventListener('change', () => {
+      view = viewSel.value;
+      reload();
+    });
+    clearBtn.addEventListener('click', () => { dateInput.value = ''; reload(); });
+    loadMoreBtn.addEventListener('click', () => fetchPage(true));
+    reload();
+    refreshCounts();
+  </script>
+</body>
+</html>

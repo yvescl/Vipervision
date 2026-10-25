@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ViperVision — LCARS</title>
+  <style>
+    /* --- LCARS theme -------------------------------------------------------
+       Black canvas, elbow frame, pill controls, condensed all-caps type.
+       No external assets (fonts/images) so it works behind the proxy CSP. */
+    :root {
+      --lc-orange: #ff9f4d;
+      --lc-gold:   #ffcc66;
+      --lc-lilac:  #cc99cc;
+      --lc-blue:   #7f8fe0;
+      --lc-red:    #cc6677;
+      --lc-ice:    #9fc8ff;
+      --lc-panel:  #11151c;
+      --gap: 8px;
+      --side: 160px;
+      --head: 64px;
+      --foot: 28px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Antonio", "Oswald", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+      background: #000;
+      color: var(--lc-ice);
+      min-height: 100vh;
+    }
+    .lcars {
+      display: grid;
+      grid-template-columns: var(--side) 1fr;
+      grid-template-rows: var(--head) 1fr var(--foot);
+      grid-template-areas:
+        "elbowtl head"
+        "side    content"
+        "elbowbl foot";
+      gap: var(--gap);
+      min-height: 100vh;
+      padding: var(--gap);
+    }
+
+    /* Elbows: solid colour with a concave quarter-circle carved toward the
+       content, using a radial-gradient (transparent lets the black show). */
+    .lcars-elbow-tl {
+      grid-area: elbowtl;
+      border-top-left-radius: 44px;
+      background: radial-gradient(circle 26px at right bottom,
+                  transparent 0 26px, var(--lc-orange) 27px);
+    }
+    .lcars-elbow-bl {
+      grid-area: elbowbl;
+      border-bottom-left-radius: 44px;
+      background: radial-gradient(circle 18px at right top,
+                  transparent 0 18px, var(--lc-orange) 19px);
+    }
+
+    .lcars-head {
+      grid-area: head;
+      background: var(--lc-orange);
+      border-radius: 8px 44px 44px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px 0 24px;
+      color: #000;
+      gap: 1rem;
+    }
+    .lcars-head-title { font-size: 1.7rem; font-weight: 800; letter-spacing: 0.16em; }
+    .lcars-head-title b { color: #7a1f00; font-weight: 800; }
+    .lcars-head-code { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.22em; opacity: 0.75; white-space: nowrap; }
+
+    .lcars-foot {
+      grid-area: foot;
+      background: var(--lc-lilac);
+      border-radius: 8px 20px 20px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 20px;
+      color: #000;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.24em;
+    }
+
+    /* Sidebar of stacked pills. */
+    .lcars-side { grid-area: side; display: flex; flex-direction: column; gap: var(--gap); }
+    .lcars-side-form { display: contents; }
+    .lcars-pill {
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      width: 100%;
+      min-height: 40px;
+      padding: 0.45rem 0.8rem;
+      border: none;
+      border-radius: 4px 24px 24px 4px;
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: #000;
+      cursor: pointer;
+      transition: filter 0.12s;
+    }
+    .lcars-pill:hover { filter: brightness(1.15); }
+    .lcars-pill.deco { cursor: default; }
+    .lcars-pill.deco:hover { filter: none; }
+    .p-orange { background: var(--lc-orange); }
+    .p-gold   { background: var(--lc-gold); }
+    .p-lilac  { background: var(--lc-lilac); }
+    .p-blue   { background: var(--lc-blue); }
+    .p-red    { background: var(--lc-red); }
+    .lcars-side-fill { flex: 1; min-height: 24px; background: var(--lc-blue); border-radius: 4px 24px 24px 4px; }
+
+    /* Content column. */
+    .lcars-content {
+      grid-area: content;
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      min-width: 0;
+    }
+
+    form.connect { display: flex; gap: var(--gap); }
+    input[type="text"] {
+      flex: 1;
+      min-width: 0;
+      padding: 0.6rem 1rem;
+      border: 2px solid #2a2f3a;
+      border-radius: 4px 18px 18px 4px;
+      background: var(--lc-panel);
+      color: var(--lc-gold);
+      font: inherit;
+      font-size: 0.95rem;
+      letter-spacing: 0.03em;
+    }
+    input[type="text"]::placeholder { color: #4a5566; }
+    input[type="text"]:focus { outline: none; border-color: var(--lc-orange); }
+    form.connect button {
+      padding: 0.55rem 1.3rem;
+      border: none;
+      border-radius: 4px 18px 18px 4px;
+      background: var(--lc-orange);
+      color: #000;
+      font: inherit;
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    form.connect button:hover { filter: brightness(1.15); }
+    form.connect button.stop { background: var(--lc-red); }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      color: var(--lc-ice);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .status .dot {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--lc-red);
+      vertical-align: middle;
+    }
+    .status.connected .dot { background: var(--lc-gold); box-shadow: 0 0 10px var(--lc-gold); }
+
+    .detectbar { display: flex; align-items: stretch; gap: var(--gap); flex-wrap: wrap; }
+    .detgroup {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      padding: 0.5rem 0.9rem 0.5rem 0.75rem;
+      background: var(--lc-panel);
+      border-left: 6px solid var(--lc-lilac);
+      border-radius: 4px 18px 18px 4px;
+    }
+    #detgroup-motion { border-left-color: var(--lc-gold); }
+    .switch {
+      display: flex; align-items: center; gap: 0.5rem; cursor: pointer;
+      color: var(--lc-ice);
+      text-transform: uppercase; letter-spacing: 0.07em;
+      font-size: 0.76rem; font-weight: 700;
+    }
+    .switch input { width: 16px; height: 16px; accent-color: var(--lc-orange); cursor: pointer; }
+    #motion-toggle { accent-color: var(--lc-gold); }
+    .count {
+      padding: 0.22rem 0.75rem;
+      border-radius: 14px;
+      background: #000;
+      border: 2px solid #2a2f3a;
+      color: var(--lc-ice);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.06em;
+    }
+    .count.active { color: #000; background: var(--lc-orange); border-color: var(--lc-orange); }
+    .count.motion.active { color: #000; background: var(--lc-gold); border-color: var(--lc-gold); }
+    #detgroup-animal { border-left-color: #00dcdc; }
+    #animal-toggle { accent-color: #00dcdc; }
+    .count.animal.active { color: #000; background: #00dcdc; border-color: #00dcdc; }
+
+    .reclbar { display: flex; align-items: center; gap: 0.8rem; }
+    .rec-btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.5rem 1.2rem;
+      border: none; border-radius: 4px 20px 20px 4px;
+      background: var(--lc-red); color: #000;
+      font: inherit; font-weight: 700; font-size: 0.85rem;
+      text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer;
+    }
+    .rec-btn:hover { filter: brightness(1.15); }
+    .rec-btn:disabled { opacity: 0.6; cursor: default; }
+    .rec-btn::before { content: ""; width: 11px; height: 11px; border-radius: 50%; background: #000; }
+    .rec-btn:disabled::before { animation: recpulse 1s infinite; }
+    @keyframes recpulse { 50% { opacity: 0.2; } }
+    .rec-status { color: var(--lc-gold); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; }
+    .light-btn {
+      padding: 0.5rem 1.1rem;
+      border: 2px solid var(--lc-gold);
+      border-radius: 4px 20px 20px 4px;
+      background: transparent; color: var(--lc-gold);
+      font: inherit; font-weight: 700; font-size: 0.85rem;
+      text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer;
+    }
+    .light-btn:hover { background: rgba(255, 204, 102, 0.15); }
+    /* Lit state: filled gold with a glow, so it reads as "on" at a glance. */
+    .light-btn.on { background: var(--lc-gold); color: #000; box-shadow: 0 0 12px var(--lc-gold); }
+    .light-btn:disabled { opacity: 0.5; cursor: default; }
+    .viewer {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border: 3px solid var(--lc-orange);
+      border-radius: 6px 28px 28px 6px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .viewer img { width: 100%; height: 100%; object-fit: contain; }
+    .viewer .placeholder {
+      color: var(--lc-lilac);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+    }
+    .ptz {
+      position: absolute;
+      right: 12px; bottom: 12px;
+      display: grid;
+      grid-template-columns: repeat(3, 44px);
+      grid-template-rows: repeat(3, 44px);
+      gap: 4px;
+      opacity: 0.6;
+      transition: opacity 0.15s;
+    }
+    .ptz:hover { opacity: 1; }
+    .ptz button {
+      width: 44px; height: 44px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.6);
+      color: var(--lc-lilac);
+      border: 2px solid var(--lc-lilac);
+      font-size: 1.1rem;
+      padding: 0;
+      touch-action: none;
+      user-select: none;
+      cursor: pointer;
+    }
+    .ptz button:hover { background: var(--lc-lilac); color: #000; }
+    .ptz button:active { filter: brightness(1.2); }
+    .ptz .up    { grid-area: 1 / 2; }
+    .ptz .left  { grid-area: 2 / 1; }
+    .ptz .right { grid-area: 2 / 3; }
+    .ptz .down  { grid-area: 3 / 2; }
+    .fullscreen {
+      position: absolute;
+      top: 12px; right: 12px;
+      width: 38px; height: 38px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.6);
+      color: var(--lc-gold);
+      border: 2px solid var(--lc-gold);
+      cursor: pointer;
+      opacity: 0.9;
+      transition: opacity 0.15s, background 0.15s;
+    }
+    .fullscreen:hover { opacity: 1; background: var(--lc-gold); color: #000; }
+    /* Fullscreen icon drawn with pure CSS (two opposite corner brackets) so it
+       renders wherever the button's CSS does — no SVG/font dependency. */
+    .fullscreen::before, .fullscreen::after {
+      content: "";
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border: 2.5px solid currentColor;
+    }
+    .fullscreen::before { top: 11px; left: 11px; border-right: 0; border-bottom: 0; }
+    .fullscreen::after  { bottom: 11px; right: 11px; border-left: 0; border-top: 0; }
+    .viewer:fullscreen .fullscreen::before { top: 11px; left: 11px; border: 2.5px solid currentColor; border-left: 0; border-top: 0; }
+    .viewer:fullscreen .fullscreen::after  { bottom: 11px; right: 11px; border: 2.5px solid currentColor; border-right: 0; border-bottom: 0; }
+    .viewer:fullscreen { width: 100vw; height: 100vh; max-width: none; border-radius: 0; border: none; }
+    .viewer:fullscreen img { object-fit: contain; }
+
+    @media (max-width: 640px) {
+      .lcars { grid-template-columns: 84px 1fr; }
+      :root { --side: 84px; }
+      .lcars-head-code { display: none; }
+      .lcars-head-title { font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="lcars">
+    <div class="lcars-elbow-tl"></div>
+    <header class="lcars-head">
+      <span class="lcars-head-title">VIPER<b>VISION</b></span>
+      <span class="lcars-head-code">LCARS · SENSOR ARRAY 47</span>
+    </header>
+
+    <nav class="lcars-side">
+      <a href="gallery" class="lcars-pill p-orange">Detections</a>
+      <a href="floorplan" class="lcars-pill p-blue">Floor plan</a>
+      <form method="POST" action="logout" class="lcars-side-form">
+        <button type="submit" class="lcars-pill p-red">Sign out</button>
+      </form>
+      <div class="lcars-pill p-lilac deco">Optical</div>
+      <div class="lcars-pill p-blue deco">03·NCC</div>
+      <div class="lcars-side-fill"></div>
+      <div class="lcars-pill p-gold deco">Sec-Grid</div>
+    </nav>
+
+    <main class="lcars-content">
+      <!-- Relative URLs throughout so the app works behind path-based proxies
+           (e.g. code-server's /proxy/5000/ prefix). -->
+      <form class="connect" method="POST" action="connect">
+        <input type="text" name="url" placeholder="rtsp://user:pass@192.168.1.100:554/stream1"
+               value="{{ url }}" autocomplete="off" spellcheck="false">
+        <button type="submit">Connect</button>
+        {% if url %}
+        <button type="submit" class="stop" formaction="disconnect">Stop</button>
+        {% endif %}
+      </form>
+
+      <div class="status" id="status"><span class="dot"></span><span id="status-text">{{ status }}</span></div>
+
+      <div class="detectbar" id="detectbar" hidden>
+        <div class="detgroup" id="detgroup-human" hidden>
+          <label class="switch">
+            <input type="checkbox" id="detect-toggle" checked>
+            <span>Human detection</span>
+          </label>
+          <span class="count" id="count">Humans: 0</span>
+        </div>
+        <div class="detgroup" id="detgroup-motion" hidden>
+          <label class="switch">
+            <input type="checkbox" id="motion-toggle">
+            <span>Motion detection</span>
+          </label>
+          <span class="count motion" id="motion-count">Motion: 0</span>
+        </div>
+        <div class="detgroup" id="detgroup-animal" hidden>
+          <label class="switch">
+            <input type="checkbox" id="animal-toggle">
+            <span>Animal detection</span>
+          </label>
+          <span class="count animal" id="animal-count">Animals: 0</span>
+        </div>
+      </div>
+
+      {% if url %}
+      <div class="reclbar">
+        <button id="record-btn" class="rec-btn">Record clip</button>
+        <button id="cast-btn" class="rec-btn">📺 Cast</button>
+        <select id="cast-select" hidden></select>
+        <button id="light-btn" class="light-btn" hidden>💡 Light off</button>
+        <span id="record-status" class="rec-status"></span>
+      </div>
+      {% endif %}
+
+      <div class="viewer" id="viewer">
+        {% if url %}
+        <img src="video_feed" alt="Live RTSP feed" id="feed">
+        <button class="fullscreen" id="fullscreen-btn" title="Toggle fullscreen" aria-label="Toggle fullscreen"></button>
+        <div class="ptz" id="ptz">
+          <button class="up"    data-dir="up"    title="Tilt up">&#9650;</button>
+          <button class="left"  data-dir="left"  title="Pan left">&#9664;</button>
+          <button class="right" data-dir="right" title="Pan right">&#9654;</button>
+          <button class="down"  data-dir="down"  title="Tilt down">&#9660;</button>
+        </div>
+        {% else %}
+        <div class="placeholder">Enter an RTSP URL above to start streaming</div>
+        {% endif %}
+      </div>
+    </main>
+
+    <div class="lcars-elbow-bl"></div>
+    <footer class="lcars-foot">United Federation of Planets</footer>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const statusText = document.getElementById('status-text');
+    const detectBar = document.getElementById('detectbar');
+    const humanGroup = document.getElementById('detgroup-human');
+    const motionGroup = document.getElementById('detgroup-motion');
+    const animalGroup = document.getElementById('detgroup-animal');
+    const detectToggle = document.getElementById('detect-toggle');
+    const motionToggle = document.getElementById('motion-toggle');
+    const animalToggle = document.getElementById('animal-toggle');
+    const countEl = document.getElementById('count');
+    const motionCountEl = document.getElementById('motion-count');
+    const animalCountEl = document.getElementById('animal-count');
+    let toggleBusy = false;
+    let motionBusy = false;
+    let animalBusy = false;
+
+    async function poll() {
+      try {
+        const res = await fetch('status');
+        if (res.status === 401) { window.location.reload(); return; }
+        const data = await res.json();
+        statusText.textContent = data.status;
+        statusEl.classList.toggle('connected', data.status === 'connected');
+
+        // Show the bar if either detector is available.
+        detectBar.hidden = !(data.detect_available || data.motion_available || data.animal_available);
+        humanGroup.hidden = !data.detect_available;
+        motionGroup.hidden = !data.motion_available;
+        animalGroup.hidden = !data.animal_available;
+
+        if (data.detect_available && !toggleBusy) {
+          detectToggle.checked = data.detect_enabled;
+        }
+        const n = data.detect_enabled ? data.person_count : 0;
+        countEl.textContent = 'Humans: ' + n;
+        countEl.classList.toggle('active', n > 0);
+
+        if (data.motion_available && !motionBusy) {
+          motionToggle.checked = data.motion_enabled;
+        }
+        const m = data.motion_enabled ? data.motion_count : 0;
+        motionCountEl.textContent = 'Motion: ' + m;
+        motionCountEl.classList.toggle('active', m > 0);
+
+        if (data.animal_available && !animalBusy) {
+          animalToggle.checked = data.animal_enabled;
+        }
+        const a = data.animal_enabled ? data.animal_count : 0;
+        animalCountEl.textContent = 'Animals: ' + a;
+        animalCountEl.classList.toggle('active', a > 0);
+
+        // Illuminator button: only shown when a light is configured (LIGHT_URL).
+        if (lightBtn) {
+          lightBtn.hidden = !data.light_available;
+          if (!lightBusy) {
+            lightBtn.classList.toggle('on', data.light_on);
+            lightBtn.textContent = data.light_on ? '💡 Light on' : '💡 Light off';
+          }
+        }
+      } catch (e) { /* server unreachable; keep last status */ }
+    }
+    poll();
+    setInterval(poll, 1000);
+
+    detectToggle?.addEventListener('change', async () => {
+      toggleBusy = true;
+      const body = new URLSearchParams({ enabled: detectToggle.checked });
+      try {
+        await fetch('detect', { method: 'POST', body });
+      } finally {
+        setTimeout(() => { toggleBusy = false; }, 500);
+      }
+    });
+
+    motionToggle?.addEventListener('change', async () => {
+      motionBusy = true;
+      const body = new URLSearchParams({ enabled: motionToggle.checked });
+      try {
+        await fetch('motion', { method: 'POST', body });
+      } finally {
+        setTimeout(() => { motionBusy = false; }, 500);
+      }
+    });
+
+    animalToggle?.addEventListener('change', async () => {
+      animalBusy = true;
+      const body = new URLSearchParams({ enabled: animalToggle.checked });
+      try {
+        await fetch('animal', { method: 'POST', body });
+      } finally {
+        setTimeout(() => { animalBusy = false; }, 500);
+      }
+    });
+
+    // Illuminator toggle (ESP32-CAM white LED via ESPHome's REST API).
+    const lightBtn = document.getElementById('light-btn');
+    let lightBusy = false;
+    lightBtn?.addEventListener('click', async () => {
+      const turnOn = !lightBtn.classList.contains('on');
+      lightBusy = true;
+      lightBtn.disabled = true;
+      try {
+        const res = await fetch('light', {
+          method: 'POST', body: new URLSearchParams({ on: turnOn ? '1' : '0' })
+        });
+        if (res.status === 401) { window.location.reload(); return; }
+        const data = await res.json();
+        if (data.ok) {
+          lightBtn.classList.toggle('on', data.light_on);
+          lightBtn.textContent = data.light_on ? '💡 Light on' : '💡 Light off';
+        } else {
+          lightBtn.textContent = '💡 Light failed';
+        }
+      } catch (e) {
+        lightBtn.textContent = '💡 Light failed';
+      } finally {
+        lightBtn.disabled = false;
+        setTimeout(() => { lightBusy = false; }, 500);
+      }
+    });
+
+    // Record button: capture a clip on demand into the Detections gallery.
+    const recBtn = document.getElementById('record-btn');
+    const recStatus = document.getElementById('record-status');
+    recBtn?.addEventListener('click', async () => {
+      recBtn.disabled = true;
+      recStatus.textContent = 'Recording…';
+      try {
+        const res = await fetch('record', { method: 'POST' });
+        if (res.status === 401) { window.location.reload(); return; }
+        const data = await res.json();
+        if (!data.ok) {
+          recStatus.textContent = 'No stream connected';
+          recBtn.disabled = false;
+          return;
+        }
+        recStatus.textContent = `Recording ~${data.seconds}s…`;
+        // The clip finishes after its post-roll + a moment to encode/upload.
+        setTimeout(() => {
+          recStatus.textContent = data.saved ? 'Saved to Detections ✓'
+                                             : 'Recorded (storage off)';
+          recBtn.disabled = false;
+        }, (data.seconds + 2) * 1000);
+      } catch (e) {
+        recStatus.textContent = 'Record failed';
+        recBtn.disabled = false;
+      }
+    });
+
+    // Cast: find Chromecasts, then stream the annotated feed to the chosen one.
+    const castBtn = document.getElementById('cast-btn');
+    const castSel = document.getElementById('cast-select');
+    let casting = false;
+    const castMsg = t => { recStatus.textContent = t; };
+    async function castStart(device) {
+      castBtn.disabled = true;
+      castMsg('Casting to ' + device + '…');
+      try {
+        const res = await fetch('cast/start', {
+          method: 'POST', body: new URLSearchParams({ device }) });
+        if (res.status === 401) { window.location.reload(); return; }
+        const data = await res.json();
+        if (data.ok) {
+          casting = true; castSel.hidden = true;
+          castBtn.textContent = '⏹ Stop casting';
+          castMsg('Casting to ' + device);
+        } else { castMsg('Cast failed: ' + data.error); }
+      } catch (e) { castMsg('Cast failed'); }
+      castBtn.disabled = false;
+    }
+    castBtn?.addEventListener('click', async () => {
+      if (casting) {
+        await fetch('cast/stop', { method: 'POST' }).catch(() => {});
+        casting = false; castBtn.textContent = '📺 Cast'; castMsg('Cast stopped');
+        return;
+      }
+      if (!castSel.hidden) { castStart(castSel.value); return; }
+      castBtn.disabled = true;
+      castMsg('Searching for Chromecasts…');
+      try {
+        const res = await fetch('cast/devices');
+        if (res.status === 401) { window.location.reload(); return; }
+        const { devices } = await res.json();
+        if (!devices.length) { castMsg('No Chromecast found'); }
+        else if (devices.length === 1) { castBtn.disabled = false; castStart(devices[0]); return; }
+        else {
+          castSel.replaceChildren(...devices.map(d => new Option(d, d)));
+          castSel.hidden = false; castBtn.textContent = 'Cast to selected'; castMsg('');
+        }
+      } catch (e) { castMsg('Search failed'); }
+      castBtn.disabled = false;
+    });
+
+    // PTZ: tap = one step; press-and-hold repeats steps until release.
+    const ptz = document.getElementById('ptz');
+    if (ptz) {
+      let repeatTimer = null;
+      const step = dir => fetch('ptz/' + dir, { method: 'POST' }).catch(() => {});
+      ptz.querySelectorAll('button').forEach(btn => {
+        const dir = btn.dataset.dir;
+        btn.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          step(dir);
+          repeatTimer = setInterval(() => step(dir), 350);
+        });
+        ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev =>
+          btn.addEventListener(ev, () => { clearInterval(repeatTimer); repeatTimer = null; })
+        );
+      });
+    }
+
+    // The live feed is an <img> streaming multipart/x-mixed-replace (MJPEG).
+    // When the underlying stream breaks — an RTSP reconnect, UDP packet loss,
+    // or the browser freezing a hidden tab — the <img> does NOT auto-resume;
+    // it stays frozen on the last frame or goes black. Reload it with a fresh
+    // request so a blip recovers on its own.
+    const feed = document.getElementById('feed');
+    if (feed) {
+      let reloadTimer = null;
+      const reloadFeed = () => {
+        clearTimeout(reloadTimer);
+        reloadTimer = null;
+        // Cache-buster forces a new GET instead of resuming the dead stream.
+        feed.src = 'video_feed?ts=' + Date.now();
+      };
+      // Wait a beat before retrying so the server-side reader has time to
+      // re-establish the RTSP session; guard against stacking timers.
+      feed.addEventListener('error', () => {
+        if (reloadTimer) return;
+        reloadTimer = setTimeout(reloadFeed, 2000);
+      });
+      // Browsers often freeze <img> streams in backgrounded tabs; refresh on
+      // return so you don't come back to a stale frame.
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) reloadFeed();
+      });
+    }
+
+    // Fullscreen toggle for the video window.
+    const viewer = document.getElementById('viewer');
+    const fsBtn = document.getElementById('fullscreen-btn');
+    fsBtn?.addEventListener('click', () => {
+      const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+      if (!fsEl) {
+        (viewer.requestFullscreen || viewer.webkitRequestFullscreen)?.call(viewer);
+      } else {
+        (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+      }
+    });
+    // Double-clicking the video also toggles fullscreen.
+    viewer?.addEventListener('dblclick', (e) => {
+      if (!e.target.closest('.ptz')) fsBtn?.click();
+    });
+  </script>
+</body>
+</html>

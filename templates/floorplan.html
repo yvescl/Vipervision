@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ViperVision — Apartment Sketch</title>
+<style>
+  :root{
+    --bg:#05060a; --panel:#0b0f1a; --ink:#e8ecff; --muted:#8b93b8;
+    --wall:#3a4a7a; --room:#111830; --hall:#1a2244;
+    --amber:#ff9f1c; --blue:#5aa9ff; --red:#ff5555; --green:#41d18a;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#eef1fa; --panel:#fff; --ink:#101426; --muted:#5a6180;
+           --wall:#93a3d6; --room:#f2f5ff; --hall:#e2e8ff; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+       padding:24px;line-height:1.5}
+  .wrap{max-width:960px;margin:0 auto}
+  h1{font-size:1.3rem;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);margin:0 0 2px}
+  .sub{color:var(--muted);font-size:.9rem;margin:0 0 18px}
+  .frame{background:var(--panel);border:1px solid var(--wall);border-radius:14px;
+         padding:14px;overflow-x:auto}
+  svg{display:block;width:100%;height:auto;min-width:620px}
+  .legend{display:flex;flex-wrap:wrap;gap:14px 22px;margin:16px 2px 0;font-size:.86rem}
+  .legend div{display:flex;align-items:center;gap:8px;color:var(--muted)}
+  .dot{width:14px;height:14px;border-radius:50%;flex:0 0 auto}
+  .swatch{width:22px;height:0;border-top:3px dashed var(--red);flex:0 0 auto}
+  .note{margin-top:18px;font-size:.9rem;color:var(--muted)}
+  .note b{color:var(--ink)}
+  rect.room{fill:var(--room);stroke:var(--wall);stroke-width:2}
+  rect.hall{fill:var(--hall);stroke:var(--wall);stroke-width:2}
+  text{fill:var(--ink);font-family:inherit}
+  .rlabel{font-size:15px;font-weight:600}
+  .rtag{font-size:11px;fill:var(--muted)}
+  .cam{font-size:19px}
+  .camlabel{font-size:10.5px;fill:var(--blue);font-weight:600}
+  .compass{font-size:12px;font-weight:700;fill:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="margin:0 0 12px"><a href="." style="color:var(--blue);text-decoration:none">◄ Live</a> &nbsp;·&nbsp; <a href="gallery" style="color:var(--blue);text-decoration:none">Detections</a></p>
+  <h1>Apartment Sketch — v17</h1>
+  <p class="sub">North up. Hallway is a west–east rectangle. West end: living room + kitchen. East end: atelier + bedroom. North: bathroom + toilet. South: front door (faces south).</p>
+
+  <div class="frame">
+  <svg viewBox="0 0 900 520" role="img" aria-label="Schematic apartment floor plan version 10, west-east hallway">
+    <defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="7" refY="3"
+              orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--red)"/></marker>
+    </defs>
+    <!-- outer wall -->
+    <rect x="20" y="20" width="860" height="480" rx="10" fill="none" stroke="var(--wall)" stroke-width="3"/>
+
+    <!-- HALLWAY spine (horizontal, W–E) -->
+    <rect class="hall" x="235" y="215" width="430" height="115" rx="6"/>
+    <text class="rlabel" x="450" y="266" text-anchor="middle">Hallway</text>
+    <text class="rtag"   x="450" y="284" text-anchor="middle">W ◄─────► E</text>
+
+    <!-- WEST end: Kitchen (N) + Living room (S, nearest door) -->
+    <rect class="room" x="40" y="60" width="175" height="150" rx="6"/>
+    <text class="rlabel" x="127" y="130" text-anchor="middle">Kitchen</text>
+    <text class="rtag"   x="127" y="149" text-anchor="middle">off living room</text>
+
+    <rect class="room" x="40" y="230" width="175" height="185" rx="6"/>
+    <text class="rlabel" x="127" y="320" text-anchor="middle">Living room</text>
+    <text class="rtag"   x="127" y="339" text-anchor="middle">nearest front door</text>
+
+    <!-- NORTH: Bathroom + Toilet -->
+    <rect class="room" x="300" y="40" width="120" height="155" rx="6"/>
+    <text class="rlabel" x="360" y="112" text-anchor="middle">Bathroom</text>
+    <text class="rtag"   x="360" y="131" text-anchor="middle">tiled · red mat</text>
+
+    <rect class="room" x="435" y="40" width="120" height="155" rx="6"/>
+    <text class="rlabel" x="495" y="112" text-anchor="middle">Toilet</text>
+    <text class="rtag"   x="495" y="131" text-anchor="middle">WC</text>
+
+    <!-- EAST end: Bedroom (N, near bathroom) + Atelier (S, near door) -->
+    <rect class="room" x="685" y="110" width="175" height="140" rx="6"/>
+    <text class="rlabel" x="772" y="175" text-anchor="middle">Bedroom</text>
+    <text class="rtag"   x="772" y="194" text-anchor="middle">near bathroom</text>
+
+    <rect class="room" x="685" y="260" width="175" height="150" rx="6"/>
+    <text class="rlabel" x="772" y="330" text-anchor="middle">Atelier / 3D printer</text>
+    <text class="rtag"   x="772" y="349" text-anchor="middle">cluttered · window</text>
+
+    <!-- front door (south side of hallway) -->
+    <rect x="322" y="324" width="56" height="12" fill="var(--amber)"/>
+    <text class="rtag" x="385" y="346" text-anchor="start" fill="var(--amber)">▼ Front door (faces south)</text>
+
+    <!-- doors (amber ticks) -->
+    <rect x="218" y="255" width="6"  height="34" fill="var(--amber)"/> <!-- living → hall (E wall) -->
+    <rect x="110" y="217" width="34" height="6"  fill="var(--amber)"/> <!-- kitchen ↔ living -->
+    <rect x="343" y="200" width="34" height="6"  fill="var(--amber)"/> <!-- bathroom → hall -->
+    <rect x="478" y="200" width="34" height="6"  fill="var(--amber)"/> <!-- toilet → hall -->
+    <rect x="670" y="220" width="6"  height="30" fill="var(--amber)"/> <!-- bedroom → hall (W wall) -->
+    <rect x="670" y="275" width="6"  height="34" fill="var(--amber)"/> <!-- atelier → hall (W wall) -->
+
+    <!-- Electrical cabinet (fuse/meter box, indicator light): built INTO the
+         partition between bathroom and toilet — flush, reaching down to the
+         hallway. Its two conjoint (double) doors open S into the hallway. -->
+    <rect x="398" y="70" width="59" height="145" rx="3"
+          fill="var(--wall)" stroke="var(--amber)" stroke-width="1.5"/>
+    <text class="rtag" x="427" y="135" text-anchor="middle" fill="var(--ink)">elec.</text>
+    <text class="rtag" x="427" y="150" text-anchor="middle" fill="var(--ink)">cabinet</text>
+    <!-- two conjoint cabinet doors on the S face, opening into the hallway -->
+    <line x1="398" y1="215" x2="427" y2="215" stroke="var(--amber)" stroke-width="3"/>
+    <line x1="428" y1="215" x2="457" y2="215" stroke="var(--amber)" stroke-width="3"/>
+    <line x1="427" y1="209" x2="427" y2="221" stroke="var(--amber)" stroke-width="1"/>
+
+    <!-- cam2: sits ON TOP of the electrical cabinet, aimed at the front door (ACTUAL) -->
+    <line x1="424" y1="205" x2="360" y2="318" stroke="var(--green)"
+          stroke-width="1.5" stroke-dasharray="4 4" opacity="0.8"/>
+    <text class="cam" x="414" y="205">📷</text>
+    <text class="camlabel" x="405" y="196" text-anchor="middle" fill="var(--green)">cam2 → door</text>
+
+    <!-- SLEEPWALK ROUTE: bed -> hallway -> front door (south) -->
+    <path d="M685 228 L618 300 L360 300 L352 322" fill="none" stroke="var(--red)"
+          stroke-width="3" stroke-dasharray="9 7" marker-end="url(#arrow)"/>
+
+    <!-- KEY search spot: in/around the built-in dresser, low -->
+    <text x="410" y="165" font-size="18">🔑</text>
+    <text class="rtag" x="600" y="150" text-anchor="start" fill="var(--red)">🔑 low · in/behind dresser</text>
+
+    <!-- CAMERAS (suggested placement — dashed green cam2 above is ACTUAL) -->
+    <text class="cam" x="700" y="150">📷</text>
+    <text class="camlabel" x="722" y="146" text-anchor="start">IR cam → bed (suggested)</text>
+
+    <text class="cam" x="560" y="300">📷</text>
+    <text class="camlabel" x="582" y="300" text-anchor="start">hallway cam ↔ (suggested)</text>
+
+    <!-- compass rose (SW, in the open south area) -->
+    <g>
+      <line x1="120" y1="415" x2="120" y2="467" stroke="var(--muted)" stroke-width="1.5"/>
+      <line x1="94" y1="441" x2="146" y2="441" stroke="var(--muted)" stroke-width="1.5"/>
+      <path d="M120 411 L116 421 L124 421 Z" fill="var(--amber)"/>
+      <text class="compass" x="120" y="407" text-anchor="middle" fill="var(--amber)">N</text>
+      <text class="compass" x="120" y="483" text-anchor="middle">S</text>
+      <text class="compass" x="157" y="445" text-anchor="middle">E</text>
+      <text class="compass" x="83" y="445" text-anchor="middle">W</text>
+    </g>
+  </svg>
+  </div>
+
+  <div class="legend">
+    <div><span class="swatch"></span> Sleepwalking route: bed → hallway → front door</div>
+    <div><span style="font-size:16px">📷</span> Suggested camera position</div>
+    <div><span style="font-size:16px">🔑</span> Where to search for the bike key (on/in the electrical cabinet)</div>
+    <div><span class="dot" style="background:var(--amber)"></span> Front door / exit</div>
+  </div>
+
+  <p class="note">
+    <b>Layout:</b> west–east hallway · living room (nearest door) + kitchen at the west end · atelier +
+    bedroom at the east end · bathroom (W) + toilet (E) on the north · front door on the south · electrical
+    cabinet (two hallway doors) built into the bathroom/toilet partition, cam2 on top of it → front door.
+    <b>Next:</b> within each pair, are the north/south positions right — kitchen N / living S (west),
+    bedroom N / atelier S (east)? And roughly where along the south wall is the front door?
+  </p>
+</div>
+</body>
+</html>
