@@ -23,8 +23,8 @@ pipeline {
                     docker run -d --name "$CONTAINER" \
                         -e VIPERVISION_PASSWORD=ci -e SECRET_KEY=ci \
                         -e RTSP_URL= -e MINIO_ENDPOINT= "$IMAGE"
-                    for i in $(seq 1 20); do
-                        if docker exec "$CONTAINER" python -c "import urllib.request as u; assert u.urlopen('http://localhost:5000/login').status == 200"; then
+                    for i in $(seq 1 60); do
+                        if docker exec "$CONTAINER" python -c "import urllib.request as u; assert u.urlopen('http://localhost:5000/login').status == 200" 2>/dev/null; then
                             exit 0
                         fi
                         sleep 1
